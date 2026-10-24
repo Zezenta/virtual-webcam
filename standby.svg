@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#2a2b3d" />
+      <stop offset="100%" stop-color="#12131a" />
+    </radialGradient>
+    <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#89b4fa" />
+      <stop offset="100%" stop-color="#cba6f7" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1280" height="720" fill="url(#bgGlow)" />
+
+  <!-- Center Circle -->
+  <circle cx="640" cy="300" r="80" fill="#181825" stroke="#313244" stroke-width="3" />
+
+  <!-- Camera Icon -->
+  <g transform="translate(640, 300) scale(1.6)">
+    <path d="M-22,-10 L-14,-18 L14,-18 L22,-10 L28,-10 C31.3,-10 34,-7.3 34,-4 L34,18 C34,21.3 31.3,24 28,24 L-28,24 C-31.3,24 -34,21.3 -34,18 L-34,-4 C-34,-7.3 -31.3,-10 -28,-10 Z" fill="none" stroke="url(#iconGrad)" stroke-width="4" stroke-linejoin="round"/>
+    <circle cx="0" cy="7" r="10" fill="none" stroke="url(#iconGrad)" stroke-width="4"/>
+    <circle cx="0" cy="7" r="4" fill="url(#iconGrad)"/>
+    <circle cx="20" cy="-2" r="2.5" fill="#f38ba8"/>
+  </g>
+
+  <!-- Pulsing dot & status -->
+  <circle cx="560" cy="445" r="5" fill="#f9e2af" />
+  <text x="575" y="450" font-family="sans-serif" font-size="18" font-weight="600" fill="#cdd6f4" letter-spacing="1.5">STANDBY</text>
+
+  <!-- Title -->
+  <text x="640" y="500" font-family="sans-serif" font-size="32" font-weight="bold" fill="#cdd6f4" text-anchor="middle" letter-spacing="0.5">
+    Cámara Virtual Activa
+  </text>
+
+  <!-- Subtitle -->
+  <text x="640" y="540" font-family="sans-serif" font-size="20" fill="#a6adc8" text-anchor="middle">
+    Conecta DroidCam en tu celular para iniciar la transmisión
+  </text>
+
+  <!-- Footer note -->
+  <text x="640" y="660" font-family="sans-serif" font-size="14" fill="#585b70" text-anchor="middle">
+    Siempre disponible para WhatsApp, Zoom y navegadores
+  </text>
+</svg>

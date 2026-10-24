@@ -1,0 +1,12 @@
+# Environment & local secrets
+.env
+.env.local
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Local system / editor files
+.DS_Store
+*.swp
+*~
