@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """
-server_webhook.py - Receptor webhook ultra-eficiente para iOS Shortcuts
-- Lee configuración desde variables de entorno o archivo .env (sin exponer IPs fijas).
-- Standby en 0.0% CPU: Inyecta el fotograma YUV precalculado directamente en /dev/video0.
-- Conmuta a DroidCam en vivo al recibir /start.
-- Fallback automático al cortar la conexión.
+server_webhook.py - Receptor webhook con auto-detección dinámica de IP
+- Standby en 0.0% CPU inyectando el fotograma YUV a /dev/video0.
+- Auto-detecta la IP del iPhone directamente desde la petición HTTP /start.
+- Cero desincronización por cambios de DHCP del router.
 """
 
 import http.server
@@ -17,7 +16,6 @@ import time
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Cargar variables de entorno desde .env si existe
 env_file = os.path.join(SCRIPT_DIR, ".env")
 if os.path.exists(env_file):
     with open(env_file, "r") as f:
@@ -28,20 +26,19 @@ if os.path.exists(env_file):
                 os.environ.setdefault(k.strip(), v.strip())
 
 PORT = int(os.environ.get("PORT", 8899))
-PHONE_IP = os.environ.get("PHONE_IP", "127.0.0.1")
+DEFAULT_PHONE_IP = os.environ.get("PHONE_IP", "192.168.0.101")
 PHONE_PORT = os.environ.get("PHONE_PORT", "4747")
 DEV = os.environ.get("DEV", "/dev/video0")
 YUV_FRAME = os.path.join(SCRIPT_DIR, "standby_frame.yuv")
 
 current_mode = "none"
+active_phone_ip = DEFAULT_PHONE_IP
 droidcam_proc = None
 standby_stop_flag = False
 standby_thread = None
 lock = threading.Lock()
 
-# Precargamos los 460.8 KB del fotograma exactamente una sola vez en RAM
 if not os.path.exists(YUV_FRAME):
-    # Generar automáticamente si no existe
     smpte_png = os.path.join(SCRIPT_DIR, "smpte_tv_720p.png")
     subprocess.run([
         "ffmpeg", "-i", smpte_png, "-s", "640x480", "-pix_fmt", "yuv420p",
@@ -52,10 +49,6 @@ with open(YUV_FRAME, "rb") as f:
     RAW_FRAME_DATA = f.read()
 
 def standby_worker():
-    """
-    Escribe el fotograma precalculado directamente en /dev/video0 a ~15 fps.
-    Cero decodificación, cero FFmpeg, cero consumo de CPU (<0.1%).
-    """
     global standby_stop_flag
     try:
         with open(DEV, "wb") as dev:
@@ -103,15 +96,16 @@ def do_start_standby_locked():
     current_mode = "standby"
     print("[ESTADO] 📺 Standby activo (Barras de TV - 0% CPU)", flush=True)
 
-def do_start_droidcam_locked():
-    global current_mode, droidcam_proc
+def do_start_droidcam_locked(target_ip):
+    global current_mode, droidcam_proc, active_phone_ip
+    active_phone_ip = target_ip
     stop_all_locked()
     time.sleep(0.2)
-    cmd = ["droidcam-cli", "-v", PHONE_IP, PHONE_PORT]
+    cmd = ["droidcam-cli", "-v", active_phone_ip, PHONE_PORT]
     proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     droidcam_proc = proc
     current_mode = "droidcam"
-    print(f"[ESTADO] 🟢 Teléfono conectado (DroidCam en vivo desde {PHONE_IP})", flush=True)
+    print(f"[ESTADO] 🟢 Teléfono conectado dinámicamente desde {active_phone_ip}", flush=True)
     threading.Thread(target=watchdog_droidcam, args=(proc,), daemon=True).start()
 
 class WebhookHandler(http.server.BaseHTTPRequestHandler):
@@ -130,10 +124,13 @@ class WebhookHandler(http.server.BaseHTTPRequestHandler):
             pass
 
     def do_GET(self):
+        # Auto-detectar la IP real de quien hace la llamada HTTP
+        client_ip = self.client_address[0]
+        
         if self.path == "/start":
             self.send_quick_ack()
             with lock:
-                do_start_droidcam_locked()
+                do_start_droidcam_locked(client_ip)
         elif self.path == "/stop":
             self.send_quick_ack()
             with lock:
@@ -160,7 +157,7 @@ if __name__ == "__main__":
         do_start_standby_locked()
     
     server = http.server.ThreadingHTTPServer(("0.0.0.0", PORT), WebhookHandler)
-    print(f"[INFO] Webhook server escuchando en puerto {PORT}...", flush=True)
+    print(f"[INFO] Webhook server escuchando en puerto {PORT} con IP dinámica...", flush=True)
     try:
         server.serve_forever()
     finally:
